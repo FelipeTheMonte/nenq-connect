@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEnQ — Aprovar Cadastro</title>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #180108;
+      color: #F2E4C4;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: #2a0312;
+      border: 1px solid rgba(242,228,196,.18);
+      border-radius: 20px;
+      padding: 32px 28px;
+      width: 100%;
+      max-width: 460px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.4);
+    }
+    .logo { font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 6px; letter-spacing: 2px; }
+    .logo span { color: #C9A44A; }
+    .subtitle { text-align: center; font-size: 13px; color: #8a4060; margin-bottom: 28px; }
+    .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #8a4060; margin-bottom: 12px; }
+    .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(242,228,196,.1); font-size: 14px; }
+    .info-row .label { color: #8a4060; }
+    .info-row .value { font-weight: 600; color: #F2E4C4; }
+    .btn {
+      width: 100%; padding: 14px; border-radius: 12px; border: none;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      margin-top: 12px; font-family: inherit;
+      transition: opacity .2s;
+    }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-gold { background: linear-gradient(135deg,#C9A44A,#a8832e); color: #180108; }
+    .btn-outline { background: transparent; border: 1px solid rgba(242,228,196,.25); color: #F2E4C4; }
+    .code-box {
+      background: #180108; border: 2px solid #C9A44A;
+      border-radius: 14px; padding: 20px;
+      text-align: center; margin-top: 20px;
+    }
+    .code-val { font-size: 40px; font-weight: 700; letter-spacing: 10px; color: #C9A44A; }
+    .code-label { font-size: 12px; color: #8a4060; margin-top: 6px; }
+    .alert { padding: 12px 16px; border-radius: 10px; font-size: 13px; margin-top: 14px; line-height: 1.5; }
+    .alert-success { background: rgba(76,175,138,.15); border: 1px solid rgba(76,175,138,.3); color: #4caf8a; }
+    .alert-error   { background: rgba(232,127,127,.15); border: 1px solid rgba(232,127,127,.3); color: #e87f7f; }
+    .loading { text-align: center; color: #8a4060; font-size: 14px; padding: 20px 0; }
+    .cargo-select {
+      width: 100%; padding: 11px 14px; border-radius: 10px;
+      background: #180108; border: 1px solid rgba(242,228,196,.2);
+      color: #F2E4C4; font-size: 14px; font-family: inherit;
+      margin-top: 16px; outline: none;
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">N<span>En</span>Q</div>
+  <div class="subtitle">Painel de Aprovação — Gestão de Pessoas</div>
+
+  <div id="loading" class="loading">⏳ Carregando solicitação...</div>
+  <div id="content" style="display:none">
+    <div class="section-title">Dados do solicitante</div>
+    <div class="info-row"><span class="label">👤 Nome</span><span class="value" id="nome">—</span></div>
+    <div class="info-row"><span class="label">🎓 Matrícula</span><span class="value" id="matricula">—</span></div>
+    <div class="info-row"><span class="label">✉️ Email</span><span class="value" id="email">—</span></div>
+
+    <div style="margin-top:20px">
+      <div class="section-title">Cargo no núcleo</div>
+      <select class="cargo-select" id="cargo">
+        <option value="Membro">Membro</option>
+        <option value="Marketing">Marketing</option>
+        <option value="Pesquisa">Pesquisa</option>
+        <option value="Eventos">Eventos</option>
+        <option value="Gestão de Pessoas">Gestão de Pessoas</option>
+        <option value="Projetos">Projetos</option>
+        <option value="Coordenadoria Geral">Coordenadoria Geral</option>
+      </select>
+    </div>
+
+    <button class="btn btn-gold" id="btnGerar" onclick="gerarCodigo()">
+      ✨ Gerar código de acesso
+    </button>
+
+    <div id="codeBox" style="display:none" class="code-box">
+      <div class="code-val" id="codeVal">——</div>
+      <div class="code-label">Código de ativação gerado</div>
+    </div>
+
+    <div id="msg"></div>
+  </div>
+
+  <div id="jaAprovado" style="display:none">
+    <div class="alert alert-success">✅ Esta solicitação já foi aprovada anteriormente.</div>
+  </div>
+</div>
+
+<script>
+  // Firebase config
+  firebase.initializeApp({
+    apiKey:            "AIzaSyD84wWbq19Oad-v-0khwHw8rsz557_vhTU",
+    authDomain:        "nenq-connect.firebaseapp.com",
+    projectId:         "nenq-connect",
+    storageBucket:     "nenq-connect.firebasestorage.app",
+    messagingSenderId: "94957767711",
+    appId:             "1:94957767711:web:72e10dd94e18332fa2592a",
+  });
+
+  emailjs.init('U_w4PzzKIYv-A1UTO');
+
+  const db     = firebase.firestore();
+  const params = new URLSearchParams(window.location.search);
+  const docId  = params.get('id');
+  let dadosUser = {};
+
+  async function init() {
+    if (!docId) {
+      document.getElementById('loading').textContent = '❌ Link inválido.';
+      return;
+    }
+    try {
+      const snap = await db.collection('cadastros_pendentes').doc(docId).get();
+      if (!snap.exists) { document.getElementById('loading').textContent = '❌ Solicitação não encontrada.'; return; }
+      const data = snap.data();
+      dadosUser = data;
+
+      if (data.status === 'completo') {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('jaAprovado').style.display = 'block';
+        return;
+      }
+      if (data.status === 'aprovado') {
+        document.getElementById('codeVal').textContent = data.codigo;
+        document.getElementById('codeBox').style.display = 'block';
+        document.getElementById('btnGerar').textContent = '🔄 Reenviar código';
+      }
+
+      document.getElementById('nome').textContent      = data.nome;
+      document.getElementById('matricula').textContent = data.matricula;
+      document.getElementById('email').textContent     = data.email;
+      if (data.cargo) document.getElementById('cargo').value = data.cargo;
+
+      document.getElementById('loading').style.display  = 'none';
+      document.getElementById('content').style.display  = 'block';
+    } catch (e) {
+      document.getElementById('loading').textContent = '❌ Erro ao carregar. Tente novamente.';
+    }
+  }
+
+  function gerarCodigoAleatorio() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
+  }
+
+  async function gerarCodigo() {
+    const btn   = document.getElementById('btnGerar');
+    const msg   = document.getElementById('msg');
+    const cargo = document.getElementById('cargo').value;
+    btn.disabled = true;
+    btn.textContent = '⏳ Gerando...';
+    msg.innerHTML = '';
+
+    const codigo = gerarCodigoAleatorio();
+
+    try {
+      // Salvar no Firestore
+      await db.collection('cadastros_pendentes').doc(docId).update({
+        status: 'aprovado', codigo, cargo,
+      });
+
+      // Enviar email com código para o usuário
+      await emailjs.send('service_4y8s6sq', 'template_7d0qvnu', {
+        to_name:  dadosUser.nome,
+        to_email: dadosUser.email,
+        matricula: dadosUser.matricula,
+        codigo,
+        cargo,
+      });
+
+      document.getElementById('codeVal').textContent    = codigo;
+      document.getElementById('codeBox').style.display  = 'block';
+      msg.innerHTML = '<div class="alert alert-success">✅ Código gerado e enviado para ' + dadosUser.email + '!</div>';
+      btn.textContent = '🔄 Reenviar código';
+      btn.disabled = false;
+    } catch (e) {
+      console.error(e);
+      msg.innerHTML = '<div class="alert alert-error">❌ Erro ao enviar email. Verifique o EmailJS.<br><small>' + e.text + '</small></div>';
+      btn.disabled = false;
+      btn.textContent = '✨ Gerar código de acesso';
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

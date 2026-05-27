@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg:       #180108;
+  --bg2:      #230210;
+  --bg3:      #2e0418;
+  --card:     #2a0312;
+  --cream:    #F2E4C4;
+  --cream2:   #E8D4A8;
+  --gold:     #C9A44A;
+  --muted:    #8a4060;
+  --border:   rgba(242,228,196,0.12);
+  --border2:  rgba(242,228,196,0.22);
+  --green:    #4caf8a;
+  --blue:     #6a9fd8;
+  --red:      #e87f7f;
+  --radius:   14px;
+  --font-display: 'Playfair Display', serif;
+  --font-body:    'DM Sans', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-size: 16px;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--cream);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 16px;
+}
+
+/* scrollbar invisível em mobile */
+::-webkit-scrollbar { display: none; }
+* { scrollbar-width: none; }
+
+button { cursor: pointer; border: none; background: none; font-family: inherit; }
+
+/* Escala de fonte global maior */
+* { -webkit-text-size-adjust: 100%; }
